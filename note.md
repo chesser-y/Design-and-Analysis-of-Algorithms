@@ -367,7 +367,92 @@ X=construct(m,1,C);
 
 ​	**输出**：构造最小的二叉搜索树T，最小化  $$E(T)=\sum_{i=1}^n(DEP_T(k_i)+1)p_i+\sum_{i=0}^n(DEP_T(d_i)+1)q_i$$
 
+​	**优化解结构**：$K=\{k_1,k_2,\ldots,k_n\}$的优化解的根必为某个$k_r$
 
+​	**优化子结构**：如果优化二叉树包含关键字集合$\{k_i,k_{i+l},\ldots,k_j\}$的子树T'，那么T'就是关于关键字集合$\{k_i,k_{i+l},\ldots,k_j\}$的子问题优化解（这个表示中间还可以有多层，那么T‘是T的左右子树时，自然也成立）；
+
+<img src="./assets/image-20250601105640586.png" alt="image-20250601105640586" style="zoom:33%;" />
+
+$E_{T^{\prime}}(T)=\sum_{x=i}^{j}(DEP_{T}(k_{x})+1)p_{x}+\sum_{x=i-1}^{j}(DEP_{T}(d_{x})+1)q_{x}$
+
+​	$=\sum_{x=i}^{j}(DEP_{T^{\prime}}(k_{x})+1)p_{x}+\sum_{x=i-1}^{j}(DEP_{T^{\prime}}(d_{x})+1)q_{x}+(DEP_{T}(k_{l})-DEP_{T^{\prime}}(k_{l}))(\sum_{x=i}^{j}p_{x}+\sum_{x=i-1}^{j}q_{x})$
+
+前两个和式为**子问题的优化解代价方程**，后一个和式为从子问题推导出父问题时的**代价差值**；
+
+​	**递归方程**：
+
+​	$令E(i,j)为\{k_i,...,k_j\}的优化解T_{ij}的期望搜索代价$
+
+​	$\begin{aligned}&\text{当}j{=}i{-}l\text{ 时,}T_{ij}\text{中只有叶结点}d_{i-l},E(i,i{-}l){=}q_{i-l};\end{aligned}$	
+
+​	$E(i,j)=P_r+E(i,r-l)+W(i,r-l)+E(r+l,j)+W(r+l,j)$
+
+​	$E$为代价值；$P_r$为搜索到该子问题$(i,j)$的根节点$r$的概率，$W=(DEP_{T}(k_{l})-DEP_{T^{\prime}}(k_{l}))(\sum_{x=i}^{j}p_{x}+\sum_{x=i-1}^{j}q_{x})$ 为从子问题推到父问题的代价差值（子树增加在父问题里面的深度，这里为1）；
+
+
+
+**递归方程化简**：$E(i,j)=min_{i \le r \le j}(E(i,r-1)+E(r+1,j)+W(i,j))$；
+
+**边界条件**：当$i > j，即j = i-1,E(i,j) = q_j$；
+
+![image-20250601112009505](./assets/image-20250601112009505.png)
+
+**数据结构**：$E[1:n+1]$：存储优化解搜索代价；
+
+​		$W[1:n+1,0:n]$:存储优化解代价增量；
+
+​		$Root[1:n;1:n]$:Root(i,j)记录子问题{i,...,j}的优化解的根;
+
+**伪代码**：time:$O(n^3)$, space:$O(n^2)$
+
+```
+Optimal-BST(p, q, n)
+For i=1 To n+1 Do
+	E(i, i-1) = qi-1; 
+	W(i, i-1) = qi-1;
+For l=1 To n Do
+	For i=1 To n-l+1 Do
+ 		j=i+l-1; 
+ 		E(i, j)=inf;
+ 		W(i, j)=W(i, j-1)+pj+qj;
+ 		For r=i To j Do
+ 			t=E(i, r-1)+E(r+1, j)+W(i, j);
+ 			If t<E(i, j)
+ 			Then E(i, j)=t; Root(i, j)=r;
+Return E and Root
+```
+
+**构造优化解**：
+
+```
+Extend(Root, n)
+(i, j) ← n.range;
+If i > j
+	n.label ← 𝑑𝑗;
+Return;
+n.Label ← 𝑘_𝑅𝑜𝑜𝑡[𝑖,𝑗];
+L ← Root[i, j];
+Initiate node lc;
+lc.range ← (i, L-1);
+n.leftChild ← lc;
+Initiate node rc;
+rc.range ← (L+1, j);
+n.rightChild ← rc;
+Extend(Root, lc);
+Extend(Root, rc);
+```
+
+总结：
+
+1. 原始问题可以划分成一系列子问题，子问题之间不是相互独立的
+2. 不同子问题的数目常常只有多项式量级
+3. 解决过程
+   1. 优化子结构
+   2. 优化解的结构分析
+   3. 建立优化解代价的递归方程
+   4. 递归地划分子问题
+   5. 自底向上计算优化解的代价，记录优化解的构造信息
+   6. 构造优化解
 
 
 
@@ -487,13 +572,84 @@ X=construct(m,1,C);
 
 ​	$F' = F - \{f(x),f(y)\} \cup f(z), f(z) = f(x) + f(y)$
 
+
+
 ### 5.4 最小生成树问题
 
-### 5.5 Minimum Makespan Scheduling
+导览：kruskal, prim算法
+
+预备知识：生成树：边加权无向连通图G的生成树是无向树，整棵树的权值是生成树边权值之和；最小生成树：权值最小的生成树；
+
+**问题定义**：
+
+​	输入：无向连通图$G=(V,E)$,权函数$W$；
+
+​	输出：$G$的最小生成树；
+
+**Kruskal算法**
+
+​	初始化：A为选定的边集，为空；$G_A=(V,A)$为对应的森林；
+
+​	**贪心策略**：选择连接$G_A$两棵树中具有最小权值的边加入A.
+
+​	**贪心选择性**：假如(u,v)是G中权值最小的边，则比有一颗最小生成树包含(u,v)
+
+​		假设T是G的最小生成树，如果$(u,v) \in T$，结论成立；否则，可以添加(u,v)，必会产生包含$(u,v)$的环，然后删除环中不同于$(u,v)$的权值最小的边$(x,y)$，得到$T'$，则$w(T')= w(T) - w(x,y) + w(u,v) \le w(T)$，$T'$也是一颗最小生成树，并且包含(u,v)；
+
+​	**剩余子问题**：假如选择的边是(x,y)间的最小边，那么剩余子问题为 $G(x,y)$；**收缩**$G/(x,y)$：用$z$代替$(x,y)$，将所有与$x,y$相邻的边连至$z$，删除$(x,y)$内部的边，其余不变。**扩张**为收缩的逆操作，记作$G|_z^{(x,y)}$.
+
+​	**最优子结构**：假如$T$是$G$的优化解，并且$(u,v)$是最小边权。那么$T/(u,v)$是$G/(u,v)$的优化解；
+
+​	$T/(u,v)$是$G/(u,v)$的无环连通完全图，因而是子问题的生成树；接下来证明是权值最小的连通树：若不是最小的连通树，那么存在更小的连通树$T'$，边权$W(T') < W(T/(u,v))$，则$T'' = T'|_{z}^{(u,v)}$是G的生成树，且权值更小，与T是G的最小生成树矛盾；
+
+伪代码：$O(ElogE) + O(\alpha(n)(V+2*E)) = O(ElogE)$
+
+```
+MST-Kruskal(G(V, E), W)
+	A={};
+	For any v in V Do
+	Make-Set(v); /* 建立只有v的集合 */
+	按照W值的递增顺序排序E中的边;
+	For (u, v) in E (按W值的递增顺序) Do
+	If Find-Set(u) != Find-Set(v) (判断是否出现回路)
+	Then A=A + {(u, v)}; Union(u, v); (合并u,v集合)
+	Return A
+```
 
 
 
+**Prim算法**
 
+​	**初始化**：选择任意节点$v_r$作为root，初始化$C=\{v_r\}$；
+
+​	**贪心策略**：选择$C$和$V-C$之前权值最小的边$(x,y)$，其中$x \in C, y \in V-C$，然后更新$C=C \cup \{y\}$
+
+​	**贪心选择性**：$(u,v)$是节点中与$u$关联的权值最小的边，那么必有一颗最小生成树包含边$(u,v)$
+
+​	假设$T$是$G$的一颗最小生成树，假如$(u,v) \in T$，那么结论成立；否则，在$T$中添加$(u,v)$，则会产生环，删除环中与$u$相关联的另一条边，得到$T'$，$w(T') = w(T) - w(u,w) + w(u,w) \le w(T)$，$T'$也是一颗最小生成树，并且包含(u,v)
+
+​	**优化子结构**：T是G的包含（u,v）的最小生成树，那么T/(u,v)是G/(u,v)的最小生成树；
+
+伪代码：$O(ElogV)$
+
+```
+MST-Prim(G, W, r)
+Input 连通图G，权值函数W，树根r
+Output G的一棵以r为根的生成树
+
+1. 	For any v in V[G] Do
+2. 		key[v]=INF //C中所有顶点与v邻接的边的最小权值
+3. 		pre[v] =null //与v邻接的具有最小权值的边
+4. 	key[r] = 0
+5. 	Q = V[G] //Q是一个最小堆
+6. 	While Q != null do
+7. 		u = Extract_Min(Q) 
+8. 		for any v in Adj[u] do //至多遍历所有的边，O(E)
+9. 			if v in Q 且 w(u,v)<key[v] then
+10. 			pre[v]  = u
+11. 			key[v]  = w(u,v) //更新信息，就要维护最小堆 O(logV)
+12. Return A={(v, pre[v])| v in V[G] -r}
+```
 
 
 
