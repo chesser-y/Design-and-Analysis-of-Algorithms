@@ -134,7 +134,7 @@
 
 递归方程：$T(n)=\theta(1),if \quad n \le c; T(n)=aT(n/b)+D(n)+C(n), if \quad n > c;$
 
-例子1：MaxMin(A) $O(3n/2-2)$
+例子1：MaxMin(A)  $O(3n/2-2)$
 
 ```
 1. If j-i+1 =1 Then 输出A[i],A[i],算法结束
